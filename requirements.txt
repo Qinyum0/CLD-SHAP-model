@@ -2,7 +2,13 @@ xgboost>=1.5.0 # 覆盖主流稳定版本
 scikit-learn>=1.0.0  # 保持sklearn兼容性
 numpy>=1.20.0  # 数值计算基础
 pandas>=1.3.0 # 数据处理
-
-
 joblib>=1.1.0  # 模型持久化
 threadpoolctl>=2.2.0  # 多线程优化
+# SHAP 可视化相关
+shap>=0.40.0  # 确保包含force plot功能
+matplotlib>=3.5.0  # SHAP绘图依赖
+streamlit>=1.10.0  # 确保Streamlit版本兼容
+
+# 可选但推荐的依赖
+seaborn>=0.11.0  # 改善可视化效果
+tqdm>=4.62.0  # 进度条显示（某些SHAP计算需要
