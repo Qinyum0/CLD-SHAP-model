@@ -7,10 +7,17 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import shap
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
 
+# 自动安装缺失包
+try:
+    import shap
+except ImportError:
+    import subprocess, sys
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "shap"])
+    import shap
+    
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
     page_title="Sarcopenia Risk Prediction in CLD Patients",
@@ -25,11 +32,10 @@ try:
     
     # 初始化SHAP解释器
     explainer = shap.Explainer(best_xgb_model)
-    shap.initjs()  # 初始化JavaScript可视化
     
 except Exception as e:
-    st.error(f"Failed to load model or SHAP explainer: {str(e)}")
-    st.stop()  # 如果加载失败则停止应用
+    st.error(f"加载失败: {str(e)}")
+    st.stop()
 
 def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
@@ -118,6 +124,7 @@ if __name__ == '__main__':
 
 
 # In[ ]:
+
 
 
 
