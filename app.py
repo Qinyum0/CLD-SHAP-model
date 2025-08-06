@@ -89,29 +89,26 @@ def main():
         prediction, proba, input_df = predict_prevalence(patient_data)
         
         if prediction is not None:
-            # 创建两列布局
-            col1, col2 = st.columns(2)
+            # 显示预测结果
+            st.subheader('Prediction Results')
+            if prediction == 1:
+                st.error(f'High Risk: Sarcopenia probability {proba[1]*100:.2f}%')
+            else:
+                st.success(f'Low Risk: Sarcopenia probability {proba[0]*100:.2f}%')
             
-            with col1:
-                st.subheader('Prediction Results')
-                if prediction == 1:
-                    st.error(f'High Risk: Sarcopenia probability {proba[1]*100:.2f}%')
-                else:
-                    st.success(f'Low Risk: Sarcopenia probability {proba[0]*100:.2f}%')
-                
-                st.progress(float(proba[1]))
-                st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
+            st.progress(float(proba[1]))
+            st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
             
-            with col2:
-                st.subheader('SHAP Force Plot')
-                shap_plot = generate_shap_force_plot(input_df)
-                if shap_plot:
-                    st.pyplot(shap_plot)
-                    st.caption("""
-                    SHAP force plot shows how each feature contributes to pushing the prediction 
-                    from the base value (average model output) to the final prediction. 
-                    Red features increase the risk, while blue features decrease it.
-                    """)
+            # 在结果下方显示SHAP力图
+            st.subheader('SHAP Force Plot')
+            shap_plot = generate_shap_force_plot(input_df)
+            if shap_plot:
+                st.pyplot(shap_plot)
+                st.caption("""
+                SHAP force plot shows how each feature contributes to pushing the prediction 
+                from the base value (average model output) to the final prediction. 
+                Red features increase the risk, while blue features decrease it.
+                """)
 
 if __name__ == '__main__':
     main()
@@ -124,6 +121,7 @@ if __name__ == '__main__':
 
 
 # In[ ]:
+
 
 
 
