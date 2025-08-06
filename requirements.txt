@@ -8,7 +8,3 @@ threadpoolctl>=2.2.0  # 多线程优化
 shap>=0.40.0  # 确保包含force plot功能
 matplotlib>=3.5.0  # SHAP绘图依赖
 streamlit>=1.10.0  # 确保Streamlit版本兼容
-
-# 可选但推荐的依赖
-seaborn>=0.11.0  # 改善可视化效果
-tqdm>=4.62.0  # 进度条显示（某些SHAP计算需要
