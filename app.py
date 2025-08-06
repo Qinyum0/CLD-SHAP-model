@@ -7,7 +7,6 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import xgboost as xgb
 import shap
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
@@ -44,20 +43,20 @@ def predict_prevalence(patient_data):
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
 
-def generate_shap_plot(input_df):
-    """生成SHAP解释图"""
+def generate_shap_force_plot(input_df):
+    """生成SHAP力图"""
     try:
         # 计算SHAP值
         shap_values = explainer(input_df)
         
-        # 创建图表
-        fig, ax = plt.subplots()
-        shap.plots.waterfall(shap_values[0], max_display=10, show=False)
+        # 创建SHAP力图
+        plt.figure()
+        shap.plots.force(shap_values[0], matplotlib=True, show=False)
         plt.tight_layout()
         
-        return fig
+        return plt.gcf()
     except Exception as e:
-        st.error(f"SHAP plot generation error: {str(e)}")
+        st.error(f"SHAP force plot generation error: {str(e)}")
         return None
 
 def main():
@@ -98,13 +97,14 @@ def main():
                 st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
             
             with col2:
-                st.subheader('SHAP Explanation')
-                shap_fig = generate_shap_plot(input_df)
-                if shap_fig:
-                    st.pyplot(shap_fig)
+                st.subheader('SHAP Force Plot')
+                shap_plot = generate_shap_force_plot(input_df)
+                if shap_plot:
+                    st.pyplot(shap_plot)
                     st.caption("""
-                    SHAP (SHapley Additive exPlanations) shows how each feature contributes to the prediction. 
-                    Features pushing the prediction higher (red) increase the risk, while those pushing lower (blue) decrease the risk.
+                    SHAP force plot shows how each feature contributes to pushing the prediction 
+                    from the base value (average model output) to the final prediction. 
+                    Red features increase the risk, while blue features decrease it.
                     """)
 
 if __name__ == '__main__':
@@ -118,6 +118,7 @@ if __name__ == '__main__':
 
 
 # In[ ]:
+
 
 
 
