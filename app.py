@@ -26,7 +26,6 @@ st.set_page_config(
 # 加载预训练模型和SHAP解释器
 try:
     # 🚨 修改这里：使用XGBoost原生格式加载模型
-    best_xgb_model = xgb.XGBClassifier()
     best_xgb_model.load_model("cld_model.json")  # 替换这一行
     
     # 初始化SHAP解释器
@@ -111,3 +110,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
