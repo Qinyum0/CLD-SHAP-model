@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[1]:
+
+
 import streamlit as st
 import pandas as pd
 import joblib
@@ -19,43 +22,44 @@ st.set_page_config(
 
 # 加载预训练模型
 try:
+    # 确保model.pkl文件存在于同一目录
     best_xgb_model = joblib.load("cld_model.pkl")  
 except Exception as e:
     st.error(f"Failed to load model: {str(e)}")
-    st.stop()
+    st.stop()  # 如果模型加载失败则停止应用
 
 def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
     try:
         input_df = pd.DataFrame([patient_data])
+        # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
-        return prediction, proba, input_df
+        return prediction, proba, input_df  # 返回input_df用于SHAP分析
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
 
 def generate_shap_plot(model, input_data, feature_names):
-    """生成SHAP力图的函数 - 使用matplotlib版本"""
+    """生成SHAP力图的函数"""
     try:
         # 创建SHAP解释器
         explainer = shap.TreeExplainer(model)
         
-        # 计算SHAP值
+        # 计算SHAP值 - 确保使用正确的数据类型
         shap_values = explainer.shap_values(input_data)
         
-        # 使用matplotlib创建force plot
-        plt.figure(figsize=(10, 3))
+        # 创建图表
+        plt.figure(figsize=(10, 4))
         
-        # 生成matplotlib版本的force plot
+        # 生成SHAP力图 - 简化参数
         shap.force_plot(
-            base_value=explainer.expected_value,
-            shap_values=shap_values[0],
-            features=input_data.iloc[0],
+            explainer.expected_value, 
+            shap_values[0], 
+            input_data.iloc[0],
             feature_names=feature_names,
             matplotlib=True,
-            show=False,
-            text_rotation=0  # 避免文本旋转问题
+            show=False
         )
         
         plt.tight_layout()
@@ -63,23 +67,6 @@ def generate_shap_plot(model, input_data, feature_names):
         
     except Exception as e:
         st.error(f"SHAP plot generation error: {str(e)}")
-        # 如果force plot失败，尝试使用其他SHAP图
-        return generate_alternative_shap_plot(model, input_data, feature_names)
-
-def generate_alternative_shap_plot(model, input_data, feature_names):
-    """生成替代的SHAP图"""
-    try:
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(input_data)
-        
-        # 使用waterfall图
-        plt.figure(figsize=(10, 6))
-        shap.plots.waterfall(shap_values[0], max_display=10, show=False)
-        plt.tight_layout()
-        return plt.gcf()
-        
-    except Exception as e:
-        st.error(f"Alternative SHAP plot also failed: {str(e)}")
         return None
 
 def main():
@@ -118,7 +105,7 @@ def main():
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
             
             # SHAP解释部分
-            st.subheader('Model Interpretation')
+            st.subheader('SHAP Force Plot')
             
             # 生成SHAP力图
             feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
@@ -131,8 +118,6 @@ def main():
                 from the base value (average model output) to the final prediction. 
                 Red features increase the risk, while blue features decrease it.
                 """)
-            else:
-                st.warning("SHAP visualization is not available. This might be due to model compatibility issues.")
 
 if __name__ == '__main__':
     main()
