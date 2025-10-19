@@ -35,7 +35,7 @@ def predict_prevalence(patient_data):
         # 使用模型预测
         proba = best_xgb_model.predict(dmatrix)[0]
         prediction = 1 if proba > 0.5 else 0
-        return prediction, [1-proba, proba], input_df  # 返回input_df用于SHAP分析
+        return prediction, [1-proba, proba], input_df
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
@@ -43,11 +43,14 @@ def predict_prevalence(patient_data):
 def generate_shap_plot(model, input_data, feature_names):
     """生成SHAP力图的函数"""
     try:
-        # 创建SHAP解释器
+        # 为XGBoost Booster创建SHAP解释器
         explainer = shap.TreeExplainer(model)
         
+        # 将输入数据转换为DMatrix
+        input_dmatrix = xgb.DMatrix(input_data)
+        
         # 计算SHAP值
-        shap_values = explainer.shap_values(input_data)
+        shap_values = explainer.shap_values(input_dmatrix)
         
         # 创建图表
         plt.figure(figsize=(10, 4))
