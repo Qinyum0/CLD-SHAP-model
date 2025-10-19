@@ -9,6 +9,9 @@ import pandas as pd
 import joblib
 import xgboost as xgb
 from sklearn.base import BaseEstimator
+import shap
+import matplotlib.pyplot as plt
+import numpy as np
 
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
@@ -36,6 +39,36 @@ def predict_prevalence(patient_data):
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None
+
+def generate_shap_plot(model, input_data, feature_names):
+    """生成SHAP力图的函数"""
+    try:
+        # 创建SHAP解释器
+        explainer = shap.TreeExplainer(model)
+        
+        # 计算SHAP值
+        shap_values = explainer.shap_values(input_data)
+        
+        # 创建图表
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # 生成SHAP力图
+        shap.force_plot(
+            explainer.expected_value, 
+            shap_values[0], 
+            input_data.iloc[0],
+            feature_names=feature_names,
+            matplotlib=True,
+            show=False,
+            text_rotation=15
+        )
+        
+        plt.tight_layout()
+        return fig
+        
+    except Exception as e:
+        st.error(f"SHAP plot generation error: {str(e)}")
+        return None
 
 def main():
     st.title('Sarcopenia Risk Prediction in CLD Patients')
@@ -69,6 +102,21 @@ def main():
             
             st.progress(float(proba[1]))
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
+            st.progress(float(proba[1]))
+            st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
+            
+            # 在结果下方显示SHAP力图
+            st.subheader('SHAP Force Plot')
+            shap_plot = generate_shap_force_plot(input_df)
+            if shap_plot:
+                st.pyplot(shap_plot)
+                st.caption("""
+                SHAP force plot shows how each feature contributes to pushing the prediction 
+                from the base value (average model output) to the final prediction. 
+                Red features increase the risk, while blue features decrease it.
+                """)
+
 
 if __name__ == '__main__':
     main()
+
