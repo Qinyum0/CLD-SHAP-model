@@ -29,6 +29,7 @@ st.set_page_config(
 # 加载预训练模型和SHAP解释器
 try:
     # 确保model.pkl文件存在于同一目录
+    best_xgb_model = xgb.XGBClassifier()
     best_xgb_model.load_model("cld_model.json")  # 替换这一行
     
     # 初始化SHAP解释器
@@ -122,6 +123,7 @@ if __name__ == '__main__':
 
 
 # In[ ]:
+
 
 
 
