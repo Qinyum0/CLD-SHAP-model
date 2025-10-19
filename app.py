@@ -43,28 +43,15 @@ def predict_prevalence(patient_data):
 def generate_shap_plot(model, input_data, feature_names):
     """生成SHAP力图的函数"""
     try:
-        # 为XGBoost Booster创建SHAP解释器
+        # 创建解释器
         explainer = shap.TreeExplainer(model)
         
-        # 将输入数据转换为DMatrix
-        input_dmatrix = xgb.DMatrix(input_data)
-        
         # 计算SHAP值
-        shap_values = explainer.shap_values(input_dmatrix)
+        shap_values = explainer.shap_values(input_data)
         
-        # 创建图表
-        plt.figure(figsize=(10, 4))
-        
-        # 生成SHAP力图
-        shap.force_plot(
-            explainer.expected_value, 
-            shap_values[0], 
-            input_data.iloc[0],
-            feature_names=feature_names,
-            matplotlib=True,
-            show=False
-        )
-        
+        # 创建简单的SHAP条形图
+        plt.figure(figsize=(10, 6))
+        shap.summary_plot(shap_values, input_data, feature_names=feature_names, show=False)
         plt.tight_layout()
         return plt.gcf()
         
@@ -124,3 +111,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
