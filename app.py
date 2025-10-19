@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
+import warnings
+import os
+
+# 抑制XGBoost的版本警告
+os.environ['XGBOOST_SILENT'] = '1'
+warnings.filterwarnings('ignore', category=UserWarning, module='xgboost')
 
 # 自动安装缺失包
 try:
@@ -27,10 +30,12 @@ st.set_page_config(
 
 # 加载预训练模型和SHAP解释器
 try:
-    # 确保model.pkl文件存在于同一目录
-    best_xgb_model = joblib.load("cld_model.pkl")  
+    # 使用pkl文件加载模型
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        best_xgb_model = joblib.load("cld_model.pkl")  
     
-    # 初始化SHAP解释器
+    # 使用TreeExplainer
     explainer = shap.TreeExplainer(best_xgb_model)
     
 except Exception as e:
@@ -112,20 +117,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-# In[2]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-
-
-
