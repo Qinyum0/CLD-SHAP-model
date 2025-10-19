@@ -17,18 +17,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 加载预训练模型 - 使用正确的方式
+# 加载预训练模型
 try:
-    # 尝试不同的加载方式
-    best_xgb_model = joblib.load("cld_model.pkl")
-    
-    # 如果是XGBoost模型，尝试使用save_model重新保存
-    if hasattr(best_xgb_model, 'save_model'):
-        # 这是一个临时解决方案
-        best_xgb_model.save_model("temp_model.json")
-        best_xgb_model = xgb.Booster()
-        best_xgb_model.load_model("temp_model.json")
-        
+    best_xgb_model = joblib.load("cld_model.pkl")  
 except Exception as e:
     st.error(f"Failed to load model: {str(e)}")
     st.stop()
@@ -37,64 +28,58 @@ def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
     try:
         input_df = pd.DataFrame([patient_data])
-        
-        # 根据模型类型进行预测
-        if hasattr(best_xgb_model, 'predict_proba'):
-            # scikit-learn接口的模型
-            proba = best_xgb_model.predict_proba(input_df)[0]
-            prediction = best_xgb_model.predict(input_df)[0]
-        else:
-            # 原生XGBoost模型
-            dmatrix = xgb.DMatrix(input_df)
-            proba = best_xgb_model.predict(dmatrix)[0]
-            prediction = 1 if proba > 0.5 else 0
-            # 将输出转换为二分类概率格式
-            proba = [1-proba, proba] if prediction == 1 else [proba, 1-proba]
-            
+        proba = best_xgb_model.predict_proba(input_df)[0]
+        prediction = best_xgb_model.predict(input_df)[0]
         return prediction, proba, input_df
-        
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
 
 def generate_shap_plot(model, input_data, feature_names):
-    """简化的SHAP图生成函数"""
+    """生成SHAP力图的函数 - 使用matplotlib版本"""
     try:
-        # 创建解释器
+        # 创建SHAP解释器
         explainer = shap.TreeExplainer(model)
         
         # 计算SHAP值
-        shap_values = explainer(input_data)
+        shap_values = explainer.shap_values(input_data)
         
-        # 使用waterfall图作为替代
-        plt.figure(figsize=(10, 6))
-        shap.plots.waterfall(shap_values[0], show=False)
+        # 使用matplotlib创建force plot
+        plt.figure(figsize=(10, 3))
+        
+        # 生成matplotlib版本的force plot
+        shap.force_plot(
+            base_value=explainer.expected_value,
+            shap_values=shap_values[0],
+            features=input_data.iloc[0],
+            feature_names=feature_names,
+            matplotlib=True,
+            show=False,
+            text_rotation=0  # 避免文本旋转问题
+        )
+        
         plt.tight_layout()
-        return plt.gcf()
-        
-    except Exception as e:
-        # 如果SHAP仍然不工作，显示特征重要性图
-        st.warning(f"SHAP force plot not available: {str(e)}. Showing feature importance instead.")
-        
-        plt.figure(figsize=(10, 6))
-        if hasattr(model, 'feature_importances_'):
-            importances = model.feature_importances_
-        else:
-            # 对于原生XGBoost
-            importances = model.get_score(importance_type='weight')
-            importances = [importances.get(f'f{i}', 0) for i in range(len(feature_names))]
-        
-        indices = np.argsort(importances)[::-1]
-        
-        plt.barh(range(len(feature_names)), [importances[i] for i in indices])
-        plt.yticks(range(len(feature_names)), [feature_names[i] for i in indices])
-        plt.xlabel('Feature Importance')
-        plt.tight_layout()
-        
         return plt.gcf()
         
     except Exception as e:
         st.error(f"SHAP plot generation error: {str(e)}")
+        # 如果force plot失败，尝试使用其他SHAP图
+        return generate_alternative_shap_plot(model, input_data, feature_names)
+
+def generate_alternative_shap_plot(model, input_data, feature_names):
+    """生成替代的SHAP图"""
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(input_data)
+        
+        # 使用waterfall图
+        plt.figure(figsize=(10, 6))
+        shap.plots.waterfall(shap_values[0], max_display=10, show=False)
+        plt.tight_layout()
+        return plt.gcf()
+        
+    except Exception as e:
+        st.error(f"Alternative SHAP plot also failed: {str(e)}")
         return None
 
 def main():
@@ -147,8 +132,7 @@ def main():
                 Red features increase the risk, while blue features decrease it.
                 """)
             else:
-                st.info("SHAP plot is not available for the current model configuration.")
+                st.warning("SHAP visualization is not available. This might be due to model compatibility issues.")
 
 if __name__ == '__main__':
     main()
-
