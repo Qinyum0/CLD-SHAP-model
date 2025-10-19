@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
-import xgboost as xgb
+import xgboost as xgb  # 新增这行
 
 # 自动安装缺失包
 try:
@@ -28,7 +25,7 @@ st.set_page_config(
 
 # 加载预训练模型和SHAP解释器
 try:
-    # 确保model.pkl文件存在于同一目录
+    # 🚨 修改这里：使用XGBoost原生格式加载模型
     best_xgb_model = xgb.XGBClassifier()
     best_xgb_model.load_model("cld_model.json")  # 替换这一行
     
@@ -114,24 +111,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-# In[2]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-
-
-
-
-
-
-
