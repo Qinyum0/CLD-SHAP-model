@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[1]:
+
+
 import streamlit as st
 import pandas as pd
 import joblib
@@ -24,10 +27,10 @@ st.set_page_config(
 
 # 加载预训练模型和SHAP解释器
 try:
-    # 回到使用原始的pkl文件，但确保XGBoost版本兼容
+    # 确保model.pkl文件存在于同一目录
     best_xgb_model = joblib.load("cld_model.pkl")  
     
-    # 使用TreeExplainer而不是通用的Explainer
+    # 初始化SHAP解释器
     explainer = shap.TreeExplainer(best_xgb_model)
     
 except Exception as e:
@@ -109,3 +112,20 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# In[2]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+
+
+
