@@ -126,23 +126,7 @@ def main():
                 - **Blue features** decrease the risk of sarcopenia
                 - The length of the bar indicates the magnitude of the feature's contribution
                 """)
-            
-            # 可选：添加特征重要性说明
-            st.markdown("---")
-            st.subheader("Feature Importance Summary")
-            
-            feature_info = {
-                "Feature": ["Age", "Gender", "Residence", "Waist Circumference"],
-                "Description": [
-                    "Older age generally increases sarcopenia risk",
-                    "Gender differences in muscle mass distribution",
-                    "Urban/rural residence may affect physical activity levels",
-                    "Waist circumference relates to body composition"
-                ]
-            }
-            
-            feature_df = pd.DataFrame(feature_info)
-            st.dataframe(feature_df, use_container_width=True)
 
 if __name__ == '__main__':
     main()
+
