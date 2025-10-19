@@ -111,7 +111,7 @@ def main():
             st.markdown("---")
             
             # SHAP解释部分 - 下方
-            st.subheader('Model Interpretation with SHAP')
+            st.subheader('SHAP Force Plot')
             
             # 生成SHAP力图
             feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
@@ -129,4 +129,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
