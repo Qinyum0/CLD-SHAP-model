@@ -108,6 +108,29 @@ def generate_shap_plot(input_data, feature_names):
     except Exception as e:
         st.error(f"SHAP plot generation error: {str(e)}")
         return None
+# 在SHAP部分添加备选方案
+try:
+    # 尝试生成SHAP图
+    feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
+    shap_plot = generate_shap_plot(input_df, feature_names)
+    
+    if shap_plot:
+        st.pyplot(shap_plot)
+    else:
+        # 备选：显示特征重要性
+        if model_type == "sklearn":
+            importances = best_xgb_model.feature_importances_
+        else:
+            importances = best_xgb_model.get_score(importance_type='weight')
+            
+        fig, ax = plt.subplots()
+        ax.barh(feature_names, importances)
+        ax.set_xlabel('Feature Importance')
+        st.pyplot(fig)
+        st.info("Showing feature importance as SHAP visualization is not available.")
+        
+except Exception as e:
+    st.error(f"Visualization error: {str(e)}")
 
 def main():
     st.title('Sarcopenia Risk Prediction in CLD Patients')
@@ -163,3 +186,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
