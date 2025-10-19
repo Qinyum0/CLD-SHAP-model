@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning)
 import streamlit as st
 import pandas as pd
 import joblib
@@ -140,3 +142,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
