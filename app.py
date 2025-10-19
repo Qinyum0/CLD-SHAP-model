@@ -30,7 +30,7 @@ try:
     best_xgb_model.load_model("cld_model.json")  # 替换这一行
     
     # 初始化SHAP解释器
-    explainer = shap.Explainer(best_xgb_model)
+    explainer = shap.TreeExplainer(best_xgb_model)
     
 except Exception as e:
     st.error(f"加载失败: {str(e)}")
@@ -111,3 +111,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
