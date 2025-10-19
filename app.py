@@ -35,10 +35,10 @@ def predict_prevalence(patient_data):
         # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
-        return prediction, proba
+        return prediction, proba, input_df  # 返回input_df用于SHAP分析
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
-        return None, None
+        return None, None, None
 
 def generate_shap_plot(model, input_data, feature_names):
     """生成SHAP力图的函数"""
@@ -91,7 +91,7 @@ def main():
             'waist': waist
         }
         
-        prediction, proba = predict_prevalence(patient_data)
+        prediction, proba, input_df = predict_prevalence(patient_data)  # 接收input_df
         
         if prediction is not None:
             st.subheader('Prediction Results')
@@ -117,5 +117,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
