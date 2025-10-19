@@ -17,7 +17,6 @@ warnings.filterwarnings('ignore')
 
 # 抑制所有日志
 logging.getLogger('xgboost').setLevel(logging.ERROR)
-st.set_option('deprecation.showPyplotGlobalUse', False)
 
 # 重定向stderr来捕获XGBoost警告
 class WarningFilter:
@@ -49,6 +48,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# 设置Streamlit配置来抑制matplotlib警告
+st.set_option('deprecation.showPyplotGlobalUse', False)  # 这行要删除或修改
 
 # 加载预训练模型和SHAP解释器
 try:
