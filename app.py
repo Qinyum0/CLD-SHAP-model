@@ -52,7 +52,7 @@ def generate_shap_force_plot(input_df):
     """生成SHAP力图"""
     try:
         # 计算SHAP值
-        shap_values = explainer(input_df)
+        shap_values = explainer.shap_values(input_df)
         
         # 创建SHAP力图
         plt.figure()
@@ -111,4 +111,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
