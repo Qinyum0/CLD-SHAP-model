@@ -6,7 +6,6 @@ import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
-import xgboost as xgb
 
 # 自动安装缺失包
 try:
@@ -25,11 +24,10 @@ st.set_page_config(
 
 # 加载预训练模型和SHAP解释器
 try:
-    # 使用XGBoost原生格式加载模型
-    best_xgb_model = xgb.XGBClassifier()
-    best_xgb_model.load_model("cld_model.json")
+    # 回到使用原始的pkl文件，但确保XGBoost版本兼容
+    best_xgb_model = joblib.load("cld_model.pkl")  
     
-    # 修复SHAP解释器初始化 - 使用TreeExplainer
+    # 使用TreeExplainer而不是通用的Explainer
     explainer = shap.TreeExplainer(best_xgb_model)
     
 except Exception as e:
@@ -75,7 +73,7 @@ def main():
     age = st.sidebar.slider('Age', 45, 100, 50)
     gender = st.sidebar.selectbox('Gender', ['Female', 'Male'])
     residence = st.sidebar.selectbox('Residence', ['Urban', 'Rural'])
-    waist = st.sidebar.slider('Waist Circumference', 15, 150, 60)
+    waist = st.sidebar.slider('Waist Circumference(cm)', 15, 150, 60)
     
     if st.sidebar.button('Predict'):
         patient_data = {
