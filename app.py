@@ -58,33 +58,39 @@ def predict_prevalence(patient_data):
         return None, None, None
 
 def generate_shap_plot(model, input_data, feature_names):
-    """生成SHAP力图的函数"""
+    """简化的SHAP图生成函数"""
     try:
-        # 创建SHAP解释器
-        if hasattr(model, 'get_booster'):
-            # 如果是sklearn接口的XGBoost
-            explainer = shap.TreeExplainer(model.get_booster())
-        else:
-            # 如果是原生XGBoost或其他模型
-            explainer = shap.TreeExplainer(model)
+        # 创建解释器
+        explainer = shap.TreeExplainer(model)
         
         # 计算SHAP值
-        shap_values = explainer.shap_values(input_data)
+        shap_values = explainer(input_data)
         
-        # 创建图形
-        plt.figure(figsize=(10, 3))
-        
-        # 生成SHAP力图
-        shap.force_plot(
-            explainer.expected_value, 
-            shap_values[0], 
-            input_data.iloc[0],
-            feature_names=feature_names,
-            matplotlib=True,
-            show=False
-        )
-        
+        # 使用waterfall图作为替代
+        plt.figure(figsize=(10, 6))
+        shap.plots.waterfall(shap_values[0], show=False)
         plt.tight_layout()
+        return plt.gcf()
+        
+    except Exception as e:
+        # 如果SHAP仍然不工作，显示特征重要性图
+        st.warning(f"SHAP force plot not available: {str(e)}. Showing feature importance instead.")
+        
+        plt.figure(figsize=(10, 6))
+        if hasattr(model, 'feature_importances_'):
+            importances = model.feature_importances_
+        else:
+            # 对于原生XGBoost
+            importances = model.get_score(importance_type='weight')
+            importances = [importances.get(f'f{i}', 0) for i in range(len(feature_names))]
+        
+        indices = np.argsort(importances)[::-1]
+        
+        plt.barh(range(len(feature_names)), [importances[i] for i in indices])
+        plt.yticks(range(len(feature_names)), [feature_names[i] for i in indices])
+        plt.xlabel('Feature Importance')
+        plt.tight_layout()
+        
         return plt.gcf()
         
     except Exception as e:
@@ -145,3 +151,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
