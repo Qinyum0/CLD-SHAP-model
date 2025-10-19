@@ -102,8 +102,6 @@ def main():
             
             st.progress(float(proba[1]))
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
-            st.progress(float(proba[1]))
-            st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
             
             # 在结果下方显示SHAP力图
             st.subheader('SHAP Force Plot')
@@ -119,4 +117,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
