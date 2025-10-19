@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import warnings
 import streamlit as st
 import pandas as pd
 import joblib
 import xgboost as xgb
+from sklearn.base import BaseEstimator
 import shap
 import matplotlib.pyplot as plt
-from sklearn.base import BaseEstimator
+import numpy as np
+
+# 过滤XGBoost警告
+warnings.filterwarnings('ignore', category=UserWarning, message='.*XGBoost.*')
 
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
@@ -16,23 +21,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 加载预训练模型和SHAP解释器
+# 加载预训练模型
 try:
-    # 确保model.pkl文件存在于同一目录
     best_xgb_model = joblib.load("cld_model.pkl")  
-    
-    # 使用TreeExplainer而不是通用的Explainer
-    explainer = shap.TreeExplainer(best_xgb_model)
-    
 except Exception as e:
-    st.error(f"Failed to load model or SHAP explainer: {str(e)}")
-    st.stop()  # 如果加载失败则停止应用
+    st.error(f"Failed to load model: {str(e)}")
+    st.stop()
 
 def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
     try:
         input_df = pd.DataFrame([patient_data])
-        # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
         return prediction, proba, input_df
@@ -40,35 +39,27 @@ def predict_prevalence(patient_data):
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
 
-def generate_shap_plot(input_df):
-    """生成SHAP解释图"""
+def generate_shap_plot(model, input_data, feature_names):
+    """生成SHAP力图的函数"""
     try:
-        # 计算SHAP值
-        shap_values = explainer.shap_values(input_df)
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(input_data)
         
-        # 创建瀑布图
-        fig, ax = plt.subplots(figsize=(10, 8))
-        shap.waterfall_plot(explainer.expected_value, shap_values[0], 
-                           feature_names=input_df.columns, show=False)
+        plt.figure(figsize=(10, 4))
+        shap.force_plot(
+            explainer.expected_value, 
+            shap_values[0], 
+            input_data.iloc[0],
+            feature_names=feature_names,
+            matplotlib=True,
+            show=False
+        )
+        
         plt.tight_layout()
+        return plt.gcf()
         
-        return fig
     except Exception as e:
         st.error(f"SHAP plot generation error: {str(e)}")
-        return None
-
-def generate_shap_summary_plot(input_df):
-    """生成SHAP摘要图作为备选"""
-    try:
-        shap_values = explainer.shap_values(input_df)
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        shap.summary_plot(shap_values, input_df, show=False)
-        plt.tight_layout()
-        
-        return fig
-    except Exception as e:
-        st.error(f"SHAP summary plot error: {str(e)}")
         return None
 
 def main():
@@ -82,8 +73,8 @@ def main():
     age = st.sidebar.slider('Age', 45, 100, 50)
     gender = st.sidebar.selectbox('Gender', ['Female', 'Male'])
     residence = st.sidebar.selectbox('Residence', ['Urban', 'Rural'])
-    waist = st.sidebar.slider('Waist Circumference', 15, 150, 60)
-    
+    waist = st.sidebar.slider('Waist Circumference (cm)', 15, 150, 60)
+
     if st.sidebar.button('Predict'):
         patient_data = {
             'age': age,
@@ -95,59 +86,29 @@ def main():
         prediction, proba, input_df = predict_prevalence(patient_data)
         
         if prediction is not None:
-            # 创建两列布局
-            col1, col2 = st.columns(2)
+            st.subheader('Prediction Results')
             
-            with col1:
-                st.subheader('Prediction Results')
-                if prediction == 1:
-                    st.error(f'High Risk: Sarcopenia probability {proba[1]*100:.2f}%')
-                else:
-                    st.success(f'Low Risk: Sarcopenia probability {proba[0]*100:.2f}%')
-                
-                st.progress(float(proba[1]))
-                st.write(f'Low Risk: {proba[0]*100:.2f}% | High Risk: {proba[1]*100:.2f}%')
-                
-                # 显示特征重要性
-                st.subheader('Feature Importance')
-                try:
-                    # 获取特征重要性
-                    feature_importance = pd.DataFrame({
-                        'feature': input_df.columns,
-                        'importance': best_xgb_model.feature_importances_
-                    }).sort_values('importance', ascending=True)
-                    
-                    # 创建水平条形图
-                    fig_imp, ax_imp = plt.subplots(figsize=(10, 6))
-                    ax_imp.barh(feature_importance['feature'], feature_importance['importance'])
-                    ax_imp.set_xlabel('Importance')
-                    ax_imp.set_title('Feature Importance')
-                    plt.tight_layout()
-                    st.pyplot(fig_imp)
-                except Exception as e:
-                    st.warning(f"Could not display feature importance: {str(e)}")
+            if prediction == 1:
+                st.error(f'High Risk: Sarcopenia probability {proba[1]*100:.2f}%')
+            else:
+                st.success(f'Low Risk: Sarcopenia probability {proba[0]*100:.2f}%')
             
-            with col2:
-                st.subheader('SHAP Explanation')
-                
-                # 尝试生成SHAP图
-                shap_fig = generate_shap_plot(input_df)
-                if shap_fig:
-                    st.pyplot(shap_fig)
-                    st.caption("""
-                    SHAP (SHapley Additive exPlanations) shows how each feature contributes to the prediction. 
-                    Features pushing the prediction higher (red) increase the risk, while those pushing lower (blue) decrease the risk.
-                    """)
-                else:
-                    # 如果瀑布图失败，尝试摘要图
-                    st.info("Using alternative SHAP visualization...")
-                    summary_fig = generate_shap_summary_plot(input_df)
-                    if summary_fig:
-                        st.pyplot(summary_fig)
-                        st.caption("""
-                        SHAP summary plot shows the impact of each feature on the model output.
-                        Red indicates higher feature values, blue indicates lower values.
-                        """)
+            st.progress(float(proba[1]))
+            st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
+            
+            # SHAP解释部分
+            st.subheader('SHAP Force Plot')
+            feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
+            shap_plot = generate_shap_plot(best_xgb_model, input_df, feature_names)
+            
+            if shap_plot:
+                st.pyplot(shap_plot)
+                st.caption("""
+                SHAP force plot shows how each feature contributes to pushing the prediction 
+                from the base value (average model output) to the final prediction. 
+                Red features increase the risk, while blue features decrease it.
+                """)
 
 if __name__ == '__main__':
     main()
+
