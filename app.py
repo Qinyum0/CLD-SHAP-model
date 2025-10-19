@@ -30,7 +30,7 @@ try:
     best_xgb_model.load_model("cld_model.json")  # 替换这一行
     
     # 初始化SHAP解释器
-    explainer = shap.TreeExplainer(best_xgb_model)
+    explainer = shap.Explainer(best_xgb_model)
     
 except Exception as e:
     st.error(f"加载失败: {str(e)}")
@@ -52,7 +52,7 @@ def generate_shap_force_plot(input_df):
     """生成SHAP力图"""
     try:
         # 计算SHAP值
-        shap_values = explainer.shap_values(input_df)
+        shap_values = explainer(input_df)
         
         # 创建SHAP力图
         plt.figure()
@@ -111,5 +111,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
