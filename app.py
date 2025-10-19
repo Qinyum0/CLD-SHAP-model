@@ -49,8 +49,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 设置Streamlit配置来抑制matplotlib警告
-st.set_option('deprecation.showPyplotGlobalUse', False)  # 这行要删除或修改
+
 
 # 加载预训练模型和SHAP解释器
 try:
