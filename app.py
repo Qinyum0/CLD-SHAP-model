@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
+import warnings
 import streamlit as st
 import pandas as pd
 import joblib
@@ -12,6 +10,9 @@ from sklearn.base import BaseEstimator
 import shap
 import matplotlib.pyplot as plt
 import numpy as np
+
+# 过滤XGBoost警告
+warnings.filterwarnings('ignore', category=UserWarning, message='.*XGBoost.*')
 
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
@@ -22,20 +23,18 @@ st.set_page_config(
 
 # 加载预训练模型
 try:
-    # 确保model.pkl文件存在于同一目录
     best_xgb_model = joblib.load("cld_model.pkl")  
 except Exception as e:
     st.error(f"Failed to load model: {str(e)}")
-    st.stop()  # 如果模型加载失败则停止应用
+    st.stop()
 
 def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
     try:
         input_df = pd.DataFrame([patient_data])
-        # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
-        return prediction, proba, input_df  # 返回input_df用于SHAP分析
+        return prediction, proba, input_df
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
@@ -43,16 +42,10 @@ def predict_prevalence(patient_data):
 def generate_shap_plot(model, input_data, feature_names):
     """生成SHAP力图的函数"""
     try:
-        # 创建SHAP解释器
         explainer = shap.TreeExplainer(model)
-        
-        # 计算SHAP值 - 确保使用正确的数据类型
         shap_values = explainer.shap_values(input_data)
         
-        # 创建图表
         plt.figure(figsize=(10, 4))
-        
-        # 生成SHAP力图 - 简化参数
         shap.force_plot(
             explainer.expected_value, 
             shap_values[0], 
@@ -93,7 +86,6 @@ def main():
         prediction, proba, input_df = predict_prevalence(patient_data)
         
         if prediction is not None:
-            # 预测结果部分
             st.subheader('Prediction Results')
             
             if prediction == 1:
@@ -106,8 +98,6 @@ def main():
             
             # SHAP解释部分
             st.subheader('SHAP Force Plot')
-            
-            # 生成SHAP力图
             feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
             shap_plot = generate_shap_plot(best_xgb_model, input_df, feature_names)
             
