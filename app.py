@@ -22,13 +22,12 @@ try:
     if os.path.exists("cld_model.json"):
         best_xgb_model = xgb.Booster()
         best_xgb_model.load_model("cld_model.json")
-    # 方法2: 如果已经有.pkl文件，尝试用joblib加载但忽略警告
+        model_type = "native"
+    # 方法2: 如果已经有.pkl文件，尝试用joblib加载
     elif os.path.exists("cld_model.pkl"):
         import joblib
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=UserWarning)
-            best_xgb_model = joblib.load("cld_model.pkl")
+        best_xgb_model = joblib.load("cld_model.pkl")
+        model_type = "sklearn"
     else:
         st.error("Model file not found. Please ensure either 'cld_model.json' or 'cld_model.pkl' exists.")
         st.stop()
@@ -36,69 +35,68 @@ except Exception as e:
     st.error(f"Failed to load model: {str(e)}")
     st.stop()
 
-class XGBoostWrapper:
-    """包装XGBoost模型以兼容scikit-learn接口"""
-    def __init__(self, model):
-        self.model = model
-        self.classes_ = np.array([0, 1])
-    
-    def predict_proba(self, X):
-        # 将DataFrame转换为DMatrix
-        dmatrix = xgb.DMatrix(X)
-        # 获取预测概率
-        proba = self.model.predict(dmatrix)
-        # 对于二分类，返回形状为(n_samples, 2)的概率数组
-        return np.column_stack([1 - proba, proba])
-    
-    def predict(self, X):
-        proba = self.predict_proba(X)
-        return (proba[:, 1] > 0.5).astype(int)
-
 def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
     try:
         input_df = pd.DataFrame([patient_data])
         
+        # 确保所有列都是数值类型
+        for col in input_df.columns:
+            input_df[col] = pd.to_numeric(input_df[col], errors='coerce')
+        
         # 检查模型类型并相应处理
-        if hasattr(best_xgb_model, 'predict_proba'):
+        if model_type == "sklearn":
             # 如果是scikit-learn接口的模型
             proba = best_xgb_model.predict_proba(input_df)[0]
             prediction = best_xgb_model.predict(input_df)[0]
         else:
-            # 如果是原生XGBoost模型，使用包装器
-            wrapper = XGBoostWrapper(best_xgb_model)
-            proba = wrapper.predict_proba(input_df)[0]
-            prediction = wrapper.predict(input_df)[0]
+            # 如果是原生XGBoost模型
+            dmatrix = xgb.DMatrix(input_df)
+            proba_raw = best_xgb_model.predict(dmatrix)[0]
+            # 将预测概率转换为二分类格式
+            proba = [1 - proba_raw, proba_raw]
+            prediction = 1 if proba_raw > 0.5 else 0
             
         return prediction, proba, input_df
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
         return None, None, None
 
-def generate_shap_plot(model, input_data, feature_names):
+def generate_shap_plot(input_data, feature_names):
     """生成SHAP力图的函数"""
     try:
-        # 检查模型类型并创建相应的解释器
-        if hasattr(model, 'predict_proba'):
-            # scikit-learn接口的模型
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(input_data)
+        # 确保输入数据是数值类型
+        input_data_clean = input_data.copy()
+        for col in input_data_clean.columns:
+            input_data_clean[col] = pd.to_numeric(input_data_clean[col], errors='coerce')
+        
+        # 创建SHAP解释器
+        if model_type == "sklearn":
+            explainer = shap.TreeExplainer(best_xgb_model)
+            shap_values = explainer.shap_values(input_data_clean)
             expected_value = explainer.expected_value
         else:
-            # 原生XGBoost模型
-            explainer = shap.TreeExplainer(model)
-            dmatrix = xgb.DMatrix(input_data)
+            explainer = shap.TreeExplainer(best_xgb_model)
+            dmatrix = xgb.DMatrix(input_data_clean)
             shap_values = explainer.shap_values(dmatrix)
             expected_value = explainer.expected_value
         
+        # 处理多类输出的情况
+        if isinstance(shap_values, list):
+            shap_values = shap_values[1]  # 取正类的SHAP值
+        
+        # 确保expected_value是标量
+        if hasattr(expected_value, '__len__'):
+            expected_value = expected_value[1] if len(expected_value) > 1 else expected_value[0]
+        
         # 创建图表
-        plt.figure(figsize=(10, 4))
+        plt.figure(figsize=(10, 6))
         
         # 生成SHAP力图
         shap.force_plot(
             expected_value, 
             shap_values[0], 
-            input_data.iloc[0],
+            input_data_clean.iloc[0],
             feature_names=feature_names,
             matplotlib=True,
             show=False
@@ -151,14 +149,7 @@ def main():
             
             # 生成SHAP力图
             feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
-            
-            # 检查模型类型并传递正确的模型对象
-            if hasattr(best_xgb_model, 'predict_proba'):
-                shap_model = best_xgb_model
-            else:
-                shap_model = XGBoostWrapper(best_xgb_model)
-                
-            shap_plot = generate_shap_plot(shap_model, input_df, feature_names)
+            shap_plot = generate_shap_plot(input_df, feature_names)
             
             if shap_plot:
                 st.pyplot(shap_plot)
