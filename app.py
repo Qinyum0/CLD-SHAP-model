@@ -46,25 +46,24 @@ def generate_shap_plot(model, input_data, feature_names):
         # 创建SHAP解释器
         explainer = shap.TreeExplainer(model)
         
-        # 计算SHAP值
+        # 计算SHAP值 - 确保使用正确的数据类型
         shap_values = explainer.shap_values(input_data)
         
         # 创建图表
-        fig, ax = plt.subplots(figsize=(10, 4))
+        plt.figure(figsize=(10, 4))
         
-        # 生成SHAP力图
+        # 生成SHAP力图 - 简化参数
         shap.force_plot(
             explainer.expected_value, 
             shap_values[0], 
             input_data.iloc[0],
             feature_names=feature_names,
             matplotlib=True,
-            show=False,
-            text_rotation=15
+            show=False
         )
         
         plt.tight_layout()
-        return fig
+        return plt.gcf()
         
     except Exception as e:
         st.error(f"SHAP plot generation error: {str(e)}")
@@ -91,26 +90,21 @@ def main():
             'waist': waist
         }
         
-        prediction, proba, input_df = predict_prevalence(patient_data)  # 接收input_df
+        prediction, proba, input_df = predict_prevalence(patient_data)
         
         if prediction is not None:
-            # 预测结果部分 - 上方
+            # 预测结果部分
             st.subheader('Prediction Results')
             
-            # 创建结果卡片
             if prediction == 1:
                 st.error(f'High Risk: Sarcopenia probability {proba[1]*100:.2f}%')
             else:
                 st.success(f'Low Risk: Sarcopenia probability {proba[0]*100:.2f}%')
             
-            # 进度条显示风险概率
             st.progress(float(proba[1]))
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
             
-            # 添加分隔线
-            st.markdown("---")
-            
-            # SHAP解释部分 - 下方
+            # SHAP解释部分
             st.subheader('SHAP Force Plot')
             
             # 生成SHAP力图
@@ -119,15 +113,11 @@ def main():
             
             if shap_plot:
                 st.pyplot(shap_plot)
-                st.markdown("""
-                **SHAP Force Plot Interpretation:**
-                - The plot shows how each feature contributes to pushing the prediction from the base value (average model output) to the final prediction.
-                - **Red features** increase the risk of sarcopenia
-                - **Blue features** decrease the risk of sarcopenia
-                - The length of the bar indicates the magnitude of the feature's contribution
+                st.caption("""
+                SHAP force plot shows how each feature contributes to pushing the prediction 
+                from the base value (average model output) to the final prediction. 
+                Red features increase the risk, while blue features decrease it.
                 """)
 
 if __name__ == '__main__':
     main()
-
-
