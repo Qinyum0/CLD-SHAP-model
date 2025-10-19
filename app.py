@@ -41,22 +41,25 @@ def predict_prevalence(patient_data):
         return None, None, None
 
 def generate_shap_plot(model, input_data, feature_names):
-    """生成SHAP力图的函数"""
+    """生成SHAP力图的函数 - 保守版本"""
     try:
+        # 确保输入数据是数值类型
+        input_data_numeric = input_data.astype(float)
+        
         # 创建SHAP解释器
         explainer = shap.TreeExplainer(model)
         
-        # 计算SHAP值 - 确保使用正确的数据类型
-        shap_values = explainer.shap_values(input_data)
+        # 计算SHAP值
+        shap_values = explainer.shap_values(input_data_numeric)
         
-        # 创建图表
+        # 创建图形
         plt.figure(figsize=(10, 4))
         
-        # 生成SHAP力图 - 简化参数
+        # 生成SHAP力图
         shap.force_plot(
-            explainer.expected_value, 
-            shap_values[0], 
-            input_data.iloc[0],
+            base_value=explainer.expected_value,
+            shap_values=shap_values[0],
+            features=input_data_numeric.iloc[0],
             feature_names=feature_names,
             matplotlib=True,
             show=False
@@ -121,3 +124,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
