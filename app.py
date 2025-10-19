@@ -8,16 +8,38 @@ import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
 import warnings
 import os
+import sys
+import logging
 
-# 抑制XGBoost的版本警告
+# 最彻底的警告和日志抑制
 os.environ['XGBOOST_SILENT'] = '1'
-warnings.filterwarnings('ignore', category=UserWarning, module='xgboost')
+warnings.filterwarnings('ignore')
+
+# 抑制所有日志
+logging.getLogger('xgboost').setLevel(logging.ERROR)
+st.set_option('deprecation.showPyplotGlobalUse', False)
+
+# 重定向stderr来捕获XGBoost警告
+class WarningFilter:
+    def __init__(self):
+        self.original_stderr = sys.stderr
+        
+    def write(self, message):
+        if "WARNING" in message and "xgboost" in message:
+            return  # 过滤掉XGBoost警告
+        self.original_stderr.write(message)
+        
+    def flush(self):
+        self.original_stderr.flush()
+
+# 应用过滤器
+sys.stderr = WarningFilter()
 
 # 自动安装缺失包
 try:
     import shap
 except ImportError:
-    import subprocess, sys
+    import subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", "shap"])
     import shap
     
@@ -30,7 +52,7 @@ st.set_page_config(
 
 # 加载预训练模型和SHAP解释器
 try:
-    # 使用pkl文件加载模型
+    # 使用上下文管理器完全抑制所有警告
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         best_xgb_model = joblib.load("cld_model.pkl")  
