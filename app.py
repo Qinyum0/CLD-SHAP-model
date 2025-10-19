@@ -73,7 +73,7 @@ def main():
     age = st.sidebar.slider('Age', 45, 100, 50)
     gender = st.sidebar.selectbox('Gender', ['Female', 'Male'])
     residence = st.sidebar.selectbox('Residence', ['Urban', 'Rural'])
-    waist = st.sidebar.slider('Waist Circumference(cm)', 15, 150, 60)
+    waist = st.sidebar.slider('Waist Circumference', 15, 150, 60)
     
     if st.sidebar.button('Predict'):
         patient_data = {
