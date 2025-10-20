@@ -9,9 +9,6 @@ import pandas as pd
 import joblib
 import xgboost as xgb
 from sklearn.base import BaseEstimator
-import shap
-import matplotlib.pyplot as plt
-import numpy as np
 
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
@@ -35,45 +32,10 @@ def predict_prevalence(patient_data):
         # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
-        return prediction, proba, input_df
+        return prediction, proba
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
-        return None, None, None
-
-def generate_shap_plot(model, input_data):
-    """生成SHAP力图 - 直接使用matplotlib"""
-    try:
-        # 确保数据是数值类型
-        input_data_numeric = input_data.astype(float)
-        
-        # 使用TreeExplainer
-        explainer = shap.TreeExplainer(model)
-        
-        # 计算SHAP值
-        shap_values = explainer.shap_values(input_data_numeric)
-        
-        # 创建matplotlib图形
-        plt.figure(figsize=(10, 6))
-        
-        # 生成force plot
-        shap.force_plot(
-            explainer.expected_value,
-            shap_values[0], 
-            input_data_numeric.iloc[0],
-            feature_names=['Age', 'Gender', 'Residence', 'Waist Circumference'],
-            matplotlib=True,
-            show=False
-        )
-        
-        # 调整布局
-        plt.tight_layout()
-        
-        # 返回图形对象
-        return plt.gcf()
-        
-    except Exception as e:
-        st.error(f"SHAP plot generation error: {str(e)}")
-        return None
+        return None, None
 
 def main():
     st.title('Sarcopenia Risk Prediction in CLD Patients')
@@ -96,7 +58,7 @@ def main():
             'waist': waist
         }
         
-        prediction, proba, input_df = predict_prevalence(patient_data)
+        prediction, proba = predict_prevalence(patient_data)
         
         if prediction is not None:
             st.subheader('Prediction Results')
@@ -107,19 +69,6 @@ def main():
             
             st.progress(float(proba[1]))
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
-            
-            # 添加SHAP解释
-            st.subheader('Model Interpretation - SHAP Analysis')
-            st.markdown("""
-            SHAP force plot shows how each feature contributes to pushing the prediction 
-            from the base value (average model output) to the final prediction. 
-            Red features increase the risk, while blue features decrease it.
-            """)
-            
-            # 生成并显示SHAP图
-            shap_fig = generate_shap_plot(best_xgb_model, input_df)
-            if shap_fig:
-                st.pyplot(shap_fig)
 
 if __name__ == '__main__':
     main()
