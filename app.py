@@ -9,9 +9,6 @@ import pandas as pd
 import joblib
 import xgboost as xgb
 from sklearn.base import BaseEstimator
-import shap
-import matplotlib.pyplot as plt
-import numpy as np
 
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
@@ -35,31 +32,10 @@ def predict_prevalence(patient_data):
         # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
-        return prediction, proba, input_df
+        return prediction, proba
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
-        return None, None, None
-
-def generate_shap_plot(model, input_data, feature_names):
-    try:
-        explainer = shap.Explainer(model)
-        shap_values = explainer(input_data)
-        
-        # 生成HTML格式的force plot
-        force_plot = shap.plots.force(shap_values[0])
-        
-        # 保存为HTML文件并在Streamlit中显示
-        shap.save_html("shap_plot.html", force_plot)
-        
-        # 在Streamlit中显示HTML
-        with open("shap_plot.html", "r") as f:
-            html_content = f.read()
-        st.components.v1.html(html_content, height=400)
-        
-        return None  # 因为我们已经直接显示了HTML
-    except Exception as e:
-        st.error(f"SHAP plot error: {str(e)}")
-        return None
+        return None, None
 
 def main():
     st.title('Sarcopenia Risk Prediction in CLD Patients')
@@ -82,7 +58,7 @@ def main():
             'waist': waist
         }
         
-        prediction, proba, input_df = predict_prevalence(patient_data)
+        prediction, proba = predict_prevalence(patient_data)
         
         if prediction is not None:
             st.subheader('Prediction Results')
@@ -93,57 +69,6 @@ def main():
             
             st.progress(float(proba[1]))
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
-            
-            # 添加SHAP解释
-            st.subheader('Model Interpretation - SHAP Analysis')
-            st.markdown("""
-            **SHAP force plot** shows how each feature contributes to pushing the prediction 
-            from the base value (average model output) to the final prediction. 
-            **Red features** increase the risk, while **blue features** decrease it.
-            """)
-            
-            # 定义特征名称（用于显示）
-            feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
-            
-            # 生成并显示SHAP图
-            shap_fig = generate_shap_plot(best_xgb_model, input_df, feature_names)
-            if shap_fig:
-                st.pyplot(shap_fig)
-                
-                # 添加详细解释
-                st.markdown("""
-                ### How to interpret this plot:
-                - **Base value**: The average prediction of the model (starting point)
-                - **Final prediction**: The model's output for this specific patient
-                - **Red bars**: Features that increase the risk of sarcopenia
-                - **Blue bars**: Features that decrease the risk of sarcopenia
-                - **Length of bars**: Magnitude of the feature's contribution
-                """)
-            else:
-                st.warning("SHAP plot could not be generated, but prediction was successful.")
-                
-                # 显示特征重要性解释
-                st.subheader('Feature Impact Summary')
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**Risk Increasing Factors**")
-                    st.markdown("""
-                    - Higher age
-                    - Male gender  
-                    - Rural residence
-                    - Larger waist circumference
-                    """)
-                    
-                with col2:
-                    st.markdown("**Risk Decreasing Factors**")
-                    st.markdown("""
-                    - Younger age
-                    - Female gender
-                    - Urban residence  
-                    - Smaller waist circumference
-                    """)
 
 if __name__ == '__main__':
     main()
-
