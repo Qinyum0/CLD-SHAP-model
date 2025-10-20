@@ -41,30 +41,24 @@ def predict_prevalence(patient_data):
         return None, None, None
 
 def generate_shap_plot(model, input_data, feature_names):
-    """生成SHAP力图 - 使用shap.Explainer"""
     try:
-        # 使用通用的Explainer而不是TreeExplainer
         explainer = shap.Explainer(model)
-        
-        # 计算SHAP值
         shap_values = explainer(input_data)
         
-        # 创建图表
-        fig, ax = plt.subplots(figsize=(10, 6))
+        # 生成HTML格式的force plot
+        force_plot = shap.plots.force(shap_values[0])
         
-        # 生成SHAP力图
-        shap.plots.force(shap_values[0], 
-                        matplotlib=True,
-                        show=False,
-                        text_rotation=15,
-                        contribution_threshold=0.05)
+        # 保存为HTML文件并在Streamlit中显示
+        shap.save_html("shap_plot.html", force_plot)
         
-        plt.tight_layout()
-        return fig
+        # 在Streamlit中显示HTML
+        with open("shap_plot.html", "r") as f:
+            html_content = f.read()
+        st.components.v1.html(html_content, height=400)
         
+        return None  # 因为我们已经直接显示了HTML
     except Exception as e:
-        st.error(f"SHAP plot generation error: {str(e)}")
-        # 如果仍然出错，返回None，不显示SHAP图
+        st.error(f"SHAP plot error: {str(e)}")
         return None
 
 def main():
@@ -152,3 +146,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
