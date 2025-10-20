@@ -41,19 +41,26 @@ def predict_prevalence(patient_data):
         return None, None, None
 
 def generate_shap_plot(model, input_data):
-    """生成SHAP力图 - 使用HTML输出"""
+    """生成SHAP力图 - 使用更稳定的方法"""
     try:
-        # 使用通用的Explainer
-        explainer = shap.Explainer(model)
+        # 使用TreeExplainer，这是对XGBoost最稳定的方法
+        explainer = shap.TreeExplainer(model)
         
         # 计算SHAP值
-        shap_values = explainer(input_data)
+        shap_values = explainer.shap_values(input_data)
         
-        # 生成HTML格式的force plot
-        force_plot = shap.plots.force(shap_values[0])
+        # 生成force plot
+        shap_plot = shap.force_plot(
+            explainer.expected_value,
+            shap_values[0],
+            input_data.iloc[0],
+            feature_names=['Age', 'Gender', 'Residence', 'Waist Circumference'],
+            matplotlib=False,
+            show=False
+        )
         
         # 保存为HTML文件
-        shap.save_html("shap_plot.html", force_plot)
+        shap.save_html("shap_plot.html", shap_plot)
         
         # 读取HTML内容
         with open("shap_plot.html", "r", encoding='utf-8') as f:
