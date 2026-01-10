@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
+import warnings
 import streamlit as st
 import pandas as pd
 import joblib
 import xgboost as xgb
 from sklearn.base import BaseEstimator
+import shap
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 过滤XGBoost警告
+warnings.filterwarnings('ignore', category=UserWarning, message='.*XGBoost.*')
 
 # 必须在所有Streamlit命令之前设置页面配置
 st.set_page_config(
@@ -19,23 +23,44 @@ st.set_page_config(
 
 # 加载预训练模型
 try:
-    # 确保model.pkl文件存在于同一目录
     best_xgb_model = joblib.load("cld_model.pkl")  
 except Exception as e:
     st.error(f"Failed to load model: {str(e)}")
-    st.stop()  # 如果模型加载失败则停止应用
+    st.stop()
 
 def predict_prevalence(patient_data):
     """使用预训练模型进行预测"""
     try:
         input_df = pd.DataFrame([patient_data])
-        # 确保输入字段与模型训练时完全一致
         proba = best_xgb_model.predict_proba(input_df)[0]
         prediction = best_xgb_model.predict(input_df)[0]
-        return prediction, proba
+        return prediction, proba, input_df
     except Exception as e:
         st.error(f"Prediction error: {str(e)}")
-        return None, None
+        return None, None, None
+
+def generate_shap_plot(model, input_data, feature_names):
+    """生成SHAP力图的函数"""
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(input_data)
+        
+        plt.figure(figsize=(10, 4))
+        shap.force_plot(
+            explainer.expected_value, 
+            shap_values[0], 
+            input_data.iloc[0],
+            feature_names=feature_names,
+            matplotlib=True,
+            show=False
+        )
+        
+        plt.tight_layout()
+        return plt.gcf()
+        
+    except Exception as e:
+        st.error(f"SHAP plot generation error: {str(e)}")
+        return None
 
 def main():
     st.title('Sarcopenia Risk Prediction in CLD Patients')
@@ -58,10 +83,11 @@ def main():
             'waist': waist
         }
         
-        prediction, proba = predict_prevalence(patient_data)
+        prediction, proba, input_df = predict_prevalence(patient_data)
         
         if prediction is not None:
             st.subheader('Prediction Results')
+            
             if prediction == 1:
                 st.error(f'High Risk: Sarcopenia probability {proba[1]*100:.2f}%')
             else:
@@ -69,6 +95,19 @@ def main():
             
             st.progress(float(proba[1]))
             st.write(f'Low Risk: {float(proba[0])*100:.2f}% | High Risk: {float(proba[1])*100:.2f}%')
+            
+            # SHAP解释部分
+            st.subheader('SHAP Force Plot')
+            feature_names = ['Age', 'Gender', 'Residence', 'Waist Circumference']
+            shap_plot = generate_shap_plot(best_xgb_model, input_df, feature_names)
+            
+            if shap_plot:
+                st.pyplot(shap_plot)
+                st.caption("""
+                SHAP force plot shows how each feature contributes to pushing the prediction 
+                from the base value (average model output) to the final prediction. 
+                Red features increase the risk, while blue features decrease it.
+                """)
 
 if __name__ == '__main__':
     main()
